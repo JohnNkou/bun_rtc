@@ -2,11 +2,11 @@ const config = {
 	iceServers:[
 		{
 			credential:"pala",
-			urls:["turn:localhost:8889"],
+			urls:"turn:snip.egouv.online:8889",
 			username:"tartar"
 		}
 	],
-	iceTransportPolicy:["relay"]
+	iceTransportPolicy:"relay"
 }
 
 export async function getDevices({audio=true,video=false}){
@@ -21,6 +21,7 @@ export async function getDevices({audio=true,video=false}){
 }
 
 export default function rtcBuilder(){
+	console.log('config',config);
 	let peer = new RTCPeerConnection(config),
 	waitingOffer = [],
 	waitingCandidate = [],
@@ -58,20 +59,20 @@ export default function rtcBuilder(){
 	}
 
 	this.addTrack = (track,stream)=>{
-		console.log("Adding track",track);
+		console.log("Adding track");
 		peer.addTrack(track,stream);
 	}
 
-	this.createOffer = async (data)=>{
+	this.createOffer = async (data={})=>{
 		return await peer.createOffer(data);
 	}
 
-	this.createAnswer = async (data)=>{
+	this.createAnswer = async (data={})=>{
 		return await peer.createAnswer(data);
 	}
 
 	this.addCandidate = (candidate)=>{
-		console.log('adding candidate',candidate);
+		console.log("adding candidate",candidate);
 		peer.addIceCandidate(candidate);
 	}
 
@@ -80,6 +81,7 @@ export default function rtcBuilder(){
 	}
 
 	peer.ontrack = (e)=>{
+		console.log("received stream, Element number in stram", e.streams.length);
 		let stream = e.streams[0];
 
 		waitingStream.forEach((waiter)=> waiter(stream));
@@ -88,23 +90,27 @@ export default function rtcBuilder(){
 	peer.onnegotiationneeded = async ()=>{
 		try{
 			console.log("Starting negotation");
-			let offer
-			if(!localSet){
-				offer = await peer.createOffer();
-				await peer.setLocalDescription(offer);
+			let offer = await peer.createOffer();
+			await peer.setLocalDescription(offer);
 
-				waitingOffer.forEach((waiter)=> waiter(offer));
-			}
+			waitingOffer.forEach((waiter)=> waiter(offer));
 		}
 		catch(err){
 			console.error("Error on onnegotiationneeded",err);
 		}
 	}
 
-	peer.onicecandidate = ({candidate})=>{
-		if(candidate){
-			console.log("new candidate",candidate);
-			waitingCandidate.forEach((waiter)=> waiter(candidate));
+	peer.onicecandidate = function(e){
+		let candidate = {},
+		fnType = typeof eval;
+
+		for(let name in e.candidate){
+			if(typeof e.candidate[name] != fnType){
+				candidate[name] = e.candidate[name];
+			}
 		}
+		console.log('sending candidate',e.candidate);
+
+		waitingCandidate.forEach((waiter)=> waiter(candidate));
 	}
 }

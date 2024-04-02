@@ -11,6 +11,10 @@ Bun.serve({
 
 		return new Response("Upgrade failed", { status:500});
 	},
+	tls:{
+		key: Bun.file('./cert/pnc.key'),
+		cert: Bun.file('./cert/pnc.pem')
+	},
 	websocket: {
 		message(ws,message){
 			try{
@@ -82,6 +86,15 @@ Bun.serve({
 
 			if(id){
 				delete registrations[id];
+			}
+
+			for(let id in registrations){
+				let user = registrations[id];
+
+				user.ws.send(JSON.stringify({
+					type: WS_CONSTANT.OFF_USER,
+					id: ws.id
+				}))
 			}
 
 			console.log("Closed ",id);

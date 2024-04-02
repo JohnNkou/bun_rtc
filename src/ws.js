@@ -7,10 +7,11 @@ export default function ws(){
 
 	instance = this;
 
-	let ws = new WebSocket(`ws://${location.hostname}:8000`),
+	let ws = new WebSocket(`wss://${location.hostname}:8000`),
 	registrations = {},
 	openWaiters = [],
 	opened = false,
+	craps = [],
 	id = 0;
 
 	ws.onerror = function(e){
@@ -28,17 +29,24 @@ export default function ws(){
 			type = data.type,
 			subscribers = registrations[type];
 
-			console.log(type,Date.now());
-
 			if(subscribers){
 				for(let id in subscribers){
 					subscribers[id](data);
 				}
 			}
+			else{
+				craps.push(data);
+			}
 		}
 		catch(e){
 			console.error("Error in on message",e);
 		}
+	}
+
+	this.getCraps = ()=> craps;
+
+	this.removeCraps = (ids)=>{
+		ids.forEach((id)=> craps.splice(id,1));
 	}
 
 	this.json = function(data){

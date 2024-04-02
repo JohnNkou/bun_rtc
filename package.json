@@ -5,6 +5,11 @@
   "devDependencies": {
     "bun-types": "latest"
   },
+  "scripts":{
+    "watch_app":"bun run --watch index.js",
+    "build_watch":"bun build --watch --outdir=bundle --sourcemap --target=browser client/index.js",
+    "watch_ws": "bun run --watch wss/server.js"
+  },
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
