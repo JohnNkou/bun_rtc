@@ -11,7 +11,6 @@ export default function Users(){
 	[ref,setRef] = useState(createRef());
 
 	useEffect(()=>{
-		console.log("START");
 		let ws = new wsBuilder();
 
 
@@ -35,22 +34,37 @@ export default function Users(){
 			setClients(data.users);
 		})
 
-		ws.register(WS_CONSTANT.NEW_USER,(data)=>{
-			clients.push({...data.user,new:true});
 
-			setClients([...clients]);
-		})
-
-		ws.register(WS_CONSTANT.OFF_USER,(data)=>{
-			for(let i=0; i < clients.length; i++){
-				if(clients[i].id == data.id){
-					clients.splice(i,1);
-					console.log("Removing user ",data.id);
-					break;
-				}
-			}
-		})
 	},[true]);
+
+	useEffect(()=>{
+
+		if(ws){
+			let d1 = ws.register(WS_CONSTANT.NEW_USER,(data)=>{
+				console.log('before',clients);
+				clients.push({...data.user,new:true});
+
+				console.log('new clients',clients);
+
+				setClients([...clients]);
+			}),
+			d2 = ws.register(WS_CONSTANT.OFF_USER,(data)=>{
+				for(let i=0; i < clients.length; i++){
+					if(clients[i].id == data.id){
+						clients.splice(i,1);
+						console.log("Removing user ",data.id);
+						break;
+					}
+				}
+			});
+
+			return ()=>{
+				console.log("Deregistering");
+				d1();
+				d2();
+			}
+		}
+	},[clients,ws])
 
 	useEffect(()=>{
 		let video = ref.current;
@@ -59,6 +73,8 @@ export default function Users(){
 			video.play();
 		}
 	},[ref.current,myStreams]);
+
+	console.log('clients',clients);
 
 	return <div>
 		<video width='200' controls ref={ref}></video>
@@ -77,12 +93,10 @@ function User({data, ws, myId, myStream}){
 	id = myId;
 
 	useEffect(()=>{
-		console.log("Setting builder");
-	},[true]);
-
-	useEffect(()=>{
 
 		if(ws && myStream){
+
+			console.warn("building user",data.id);
 
 			let video = document.getElementById(data.id),
 			craps = ws.getCraps(),
@@ -107,6 +121,7 @@ function User({data, ws, myId, myStream}){
 				if(message.origin == data.id){
 					if(message.target == id){
 						peer.addCandidate(message.candidate);
+						console.log("From",message.origin);
 					}
 					else{
 						console.error("Received an add candidate with a bad target",message,id);
@@ -119,6 +134,7 @@ function User({data, ws, myId, myStream}){
 
 			peer.registerCandidate((candidate)=>{
 				ws.json({ type: WS_CONSTANT.CANDIDATE, candidate, target:data.id, origin:id })
+				console.log("To",data.id);
 			})
 
 			peer.registerStream((stream)=>{
